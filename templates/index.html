@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Scheduler</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary: #2d3436;
+            --secondary: #636e72;
+            --accent: #2d3436;
+            --edit-mode: #2d3436;
+            --save-mode: #000000;
+            --download-mode: #444444;
+            --light: rgba(255, 255, 255, 0.6);
+            --dark: #2d3436;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f5f6fa 0%, #dcdde1 100%);
+            background-attachment: fixed;
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            font-size: 3rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--secondary);
+            margin-bottom: 40px;
+            font-weight: 300;
+            font-size: 1.1rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .alert-error {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #d63031;
+            border-left: 5px solid #2d3436;
+        }
+
+        .alert-info {
+            background-color: rgba(255, 255, 255, 0.3);
+            color: var(--primary);
+            border-left: 5px solid var(--primary);
+        }
+
+        /* Layout */
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .input-section {
+            width: 100%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+        }
+
+        .result-section {
+            width: 100%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 35px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h3 {
+            margin-top: 0;
+            color: var(--primary);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* Input Row Styling */
+        .input-row {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 18px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.4s ease;
+            animation: fadeInRow 0.5s ease-out;
+        }
+
+        @keyframes fadeInRow {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-row:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.03);
+        }
+
+        .row-header {
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+        }
+
+        .subject-group { flex: 1; }
+        .count-group { flex: 0 0 140px; }
+        .checkbox-group {
+            flex: 0 0 auto;
+            margin-top: 28px;
+            display: flex;
+            align-items: center;
+            height: 48px;
+        }
+
+        label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: var(--secondary);
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 14px;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--dark);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 10px 18px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .checkbox-wrapper:hover {
+            background: rgba(255, 255, 255, 0.6);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin: 0;
+            accent-color: var(--primary);
+        }
+
+        .checkbox-label {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 0;
+            letter-spacing: 0.5px;
+        }
+
+        .predefined-slots-container {
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 14px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .predefined-slots-container.active {
+            display: block;
+            animation: expandDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes expandDown {
+            from { opacity: 0; transform: translateY(-10px); scale: 0.98; }
+            to { opacity: 1; transform: translateY(0); scale: 1; }
+        }
+
+        .slot-entry {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .slot-entry span {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--secondary);
+            width: 25px;
+            text-align: center;
+        }
+
+        /* Main Buttons */
+        .btn-generate {
+            width: 100%;
+            padding: 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 18px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            background: #000;
+        }
+
+        /* ADD / REMOVE SUBJECT BUTTONS */
+        .controls-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px 0 35px;
+        }
+
+        .btn-control {
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--primary);
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: inherit;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            letter-spacing: 0.5px;
+        }
+
+        .btn-control:hover {
+            background: var(--primary);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn-remove:hover {
+            background: #d63031;
+            border-color: #d63031;
+        }
+
+        /* Result Header & Buttons */
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-edit { background-color: var(--edit-mode); }
+        .btn-download { background-color: var(--download-mode); }
+        .btn-action:hover { filter: brightness(120%); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 25px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+        }
+
+        .timetable-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 8px;
+            min-width: 900px;
+        }
+
+        .timetable-table th,
+        .timetable-table td {
+            padding: 18px;
+            text-align: center;
+            border-radius: 15px;
+        }
+
+        .timetable-table th {
+            background: rgba(0, 0, 0, 0.05);
+            color: var(--primary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .timetable-table td {
+            height: 75px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.3);
+            color: var(--primary);
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .timetable-table td:first-child {
+            font-weight: 800;
+            background: rgba(0, 0, 0, 0.03);
+            width: 130px;
+            letter-spacing: -0.5px;
+        }
+
+        .lunch-cell {
+            background: rgba(0, 0, 0, 0.01) !important;
+            width: 60px;
+            position: relative;
+        }
+
+        .lunch-wrapper {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            color: var(--secondary);
+            font-weight: 800;
+            font-size: 0.7rem;
+            letter-spacing: 5px;
+            opacity: 0.4;
+        }
+
+        .subject-cell {
+            background: #fff !important;
+            color: #000 !important;
+            font-weight: 700;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .free-period {
+            color: var(--secondary);
+            font-style: italic;
+            font-size: 0.85rem;
+            opacity: 0.5;
+        }
+
+        .editable-active {
+            background: #fff !important;
+            color: #000 !important;
+            box-shadow: 0 0 0 4px var(--primary) !important;
+            outline: none;
+            font-style: normal !important;
+            opacity: 1 !important;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .row-header { flex-direction: column; gap: 15px; }
+            .count-group, .checkbox-group { width: 100%; flex: none; }
+            .checkbox-group { margin-top: 0; }
+            .input-section { padding: 30px 20px; }
+            h1 { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Timetable Scheduler</h1>
+
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        <div class="app-layout">
+
+            <div class="input-section">
+                <h3>Subjects Input</h3>
+
+                <div class="alert alert-info">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Total Slots: <strong>{{ total_available_slots }}</strong></span>
+                        <span>Requested: <strong id="total-requested-count">{{ total_requested_classes
+                                }}</strong></span>
+                    </div>
+                </div>
+
+                <form id="configForm" method="POST" action="/" autocomplete="off">
+
+                    {% for i in range(max_subjects) %}
+                    {% set idx = i + 1 %}
+                    {% set subj = subjects[i] %}
+
+                    {% set is_visible = (idx <= 4) or (subj.name) or (subj.count> 0) %}
+
+                        <div class="input-row {% if not is_visible %}hidden-row{% endif %}" id="row_{{ idx }}"
+                            style="{% if not is_visible %}display:none;{% endif %}">
+
+                            <div class="row-header">
+                                <div class="subject-group">
+                                    <label>Subject Name {{ idx }}</label>
+                                    <input type="text" name="subject_name_{{ idx }}"
+                                        class="clear-on-load subject-name-input" value="{{ subj.name }}"
+                                        placeholder="Enter Subject">
+                                </div>
+
+                                <div class="count-group">
+                                    <label>Classes/Week</label>
+                                    <input type="number" id="count_{{ idx }}" name="classes_per_week_{{ idx }}"
+                                        class="clear-on-load class-count-input" value="{{ subj.count }}" min="0"
+                                        max="10" onchange="renderSlots({{ idx }});"
+                                        oninput="updateTotalCount(); renderSlots({{ idx }});">
+                                </div>
+
+                                <div class="checkbox-group">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" id="check_{{ idx }}" name="predefined_{{ idx }}"
+                                            class="clear-on-load-checkbox" {% if subj.is_predefined %}checked{% endif %}
+                                            onchange="togglePredefined({{ idx }})">
+                                        <label for="check_{{ idx }}" class="checkbox-label">FIXED SLOTS?</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="slots_container_{{ idx }}"
+                                class="predefined-slots-container {% if subj.is_predefined %}active{% endif %}">
+                                <label style="margin-bottom: 8px;">Specify Day & Time:</label>
+                                <div id="slots_wrapper_{{ idx }}">
+                                    {% if subj.is_predefined and subj.count > 0 %}
+                                    {% for j in range(subj.count) %}
+                                    {% set p_slot = subj.predefined_slots[j] %}
+                                    <div class="slot-entry">
+                                        <span>{{ j + 1 }}</span>
+                                        <select name="predefined_day_{{ idx }}_{{ j + 1 }}">
+                                            <option value="">Day...</option>
+                                            {% for d in days %}<option value="{{ d }}" {% if d==p_slot.day %}selected{%
+                                                endif %}>{{ d }}</option>{% endfor %}
+                                        </select>
+                                        <select name="predefined_time_{{ idx }}_{{ j + 1 }}">
+                                            <option value="">Time...</option>
+                                            {% for t in solver_times %}<option value="{{ t }}" {% if t==p_slot.time
+                                                %}selected{% endif %}>{{ t }}</option>{% endfor %}
+                                        </select>
+                                    </div>
+                                    {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="controls-container">
+                            <button type="button" class="btn-control btn-add" onclick="addSubjectRow()">
+                                <span style="font-size:1.2rem;">+</span> Add Subject
+                            </button>
+                            <button type="button" class="btn-control btn-remove" onclick="removeSubjectRow()">
+                                <span style="font-size:1.2rem;">−</span> Remove
+                            </button>
+                        </div>
+
+                        <button type="submit" class="btn-generate">Generate Timetable</button>
+                </form>
+            </div>
+
+            {% if schedule_found %}
+            <div class="result-section" id="result-section">
+                <div class="result-header">
+                    <h3 style="margin:0; border:none;">Generated Timetable</h3>
+                    <div class="action-buttons">
+                        <button onclick="toggleEditMode()" id="edit-btn" class="btn-action btn-edit">Edit ✏️</button>
+                        <button onclick="downloadTimetable()" class="btn-action btn-download">Download 📷</button>
+                    </div>
+                </div>
+
+                <div class="table-container" id="capture-target">
+                    <table class="timetable-table" id="generated-table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                {% for t in times %}<th>{{ t }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in days %}
+                            <tr>
+                                <td>{{ day }}</td>
+                                {% for t in times %}
+                                {% if t == break_time_str %}
+                                <td class="lunch-cell">
+                                    <div class="lunch-wrapper">LUNCH</div>
+                                </td>
+                                {% else %}
+                                {% set cell_val = timetable[day][t] %}
+                                <td
+                                    class="editable-cell {% if cell_val == 'FREE PERIOD' %}free-period{% else %}subject-cell{% endif %}">
+                                    {{ cell_val }}
+                                </td>
+                                {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const DAYS = {{ days | tojson }};
+        const SOLVER_TIMES = {{ solver_times | tojson }};
+        const MAX_SUBJECTS = 10;
+        const MIN_SUBJECTS = 4;
+
+        // Helper to count currently visible rows based on inline style
+        function getVisibleRowCount() {
+            let count = 0;
+            for (let i = 1; i <= MAX_SUBJECTS; i++) {
+                const row = document.getElementById('row_' + i);
+                if (row && row.style.display !== 'none') {
+                    count = i; // The highest index visible is our count
+                }
+            }
+            return Math.max(count, MIN_SUBJECTS);
+        }
+
+        function addSubjectRow() {
+            let currentCount = getVisibleRowCount();
+            if (currentCount >= MAX_SUBJECTS) {
+                alert("Maximum limit of 10 subjects reached.");
+                return;
+            }
+
+            // Show next row
+            let nextIdx = currentCount + 1;
+            const nextRow = document.getElementById('row_' + nextIdx);
+            if (nextRow) {
+                nextRow.style.display = 'block';
+                // Scroll slightly to show it if needed
+                nextRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function removeSubjectRow() {
+            let currentCount = getVisibleRowCount();
+            if (currentCount <= MIN_SUBJECTS) {
+                alert("You must have at least 4 subject rows.");
+                return;
+            }
+
+            // Hide current last row
+            const lastRow = document.getElementById('row_' + currentCount);
+            if (lastRow) {
+                lastRow.style.display = 'none';
+
+                // CLEAR DATA in that row to prevent submission
+                // 1. Clear Name
+                const nameInput = lastRow.querySelector('.subject-name-input');
+                if (nameInput) nameInput.value = "";
+
+                // 2. Clear Count
+                const countInput = lastRow.querySelector('.class-count-input');
+                if (countInput) {
+                    countInput.value = "0";
+                    // Trigger update logic
+                    updateTotalCount();
+                    renderSlots(currentCount);
+                }
+
+                // 3. Uncheck manual
+                const checkbox = document.getElementById('check_' + currentCount);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    togglePredefined(currentCount);
+                }
+            }
+        }
+
+        // --- EXISTING FUNCTIONS ---
+
+        function updateTotalCount() {
+            const inputs = document.querySelectorAll('.class-count-input');
+            let total = 0;
+            inputs.forEach(input => {
+                // Only sum if the row is visible!
+                const row = input.closest('.input-row');
+                if (row && row.style.display !== 'none') {
+                    total += parseInt(input.value) || 0;
+                }
+            });
+            const display = document.getElementById('total-requested-count');
+            if (display) display.innerText = total;
+        }
+
+        function togglePredefined(id) {
+            const checkbox = document.getElementById('check_' + id);
+            const container = document.getElementById('slots_container_' + id);
+            if (checkbox.checked) {
+                container.classList.add('active');
+                renderSlots(id);
+            } else {
+                container.classList.remove('active');
+            }
+        }
+
+        function renderSlots(id) {
+            const countInput = document.getElementById('count_' + id);
+            const checkbox = document.getElementById('check_' + id);
+            const wrapper = document.getElementById('slots_wrapper_' + id);
+
+            if (!checkbox.checked) return;
+
+            let count = parseInt(countInput.value) || 0;
+            if (count < 0) count = 0;
+
+            const currentRows = wrapper.getElementsByClassName('slot-entry').length;
+            if (count === currentRows) return;
+
+            if (count > currentRows) {
+                for (let j = currentRows + 1; j <= count; j++) {
+                    const div = document.createElement('div');
+                    div.className = 'slot-entry';
+                    div.innerHTML = `
+                    <span>${j}</span>
+                    <select name="predefined_day_${id}_${j}" required>
+                        <option value="">Day...</option>
+                        ${DAYS.map(d => `<option value="${d}">${d}</option>`).join('')}
+                    </select>
+                    <select name="predefined_time_${id}_${j}" required>
+                        <option value="">Time...</option>
+                        ${SOLVER_TIMES.map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                `;
+                    wrapper.appendChild(div);
+                }
+            } else if (count < currentRows) {
+                while (wrapper.children.length > count) {
+                    wrapper.removeChild(wrapper.lastChild);
+                }
+            }
+        }
+
+        let isEditMode = false;
+
+        function updateCellTheme(cell) {
+            let text = cell.innerText.trim();
+            let upperText = text.toUpperCase();
+            if (upperText === "FREE PERIOD" || upperText === "") {
+                cell.classList.add('free-period');
+                cell.classList.remove('subject-cell');
+                cell.innerText = "FREE PERIOD";
+            } else {
+                cell.classList.add('subject-cell');
+                cell.classList.remove('free-period');
+            }
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            const btn = document.getElementById('edit-btn');
+            const cells = document.querySelectorAll('.editable-cell');
+            if (isEditMode) {
+                btn.innerText = "Save 💾";
+                btn.style.backgroundColor = "var(--save-mode)";
+                cells.forEach(cell => {
+                    cell.contentEditable = "true";
+                    cell.classList.add('editable-active');
+                    cell.addEventListener('blur', function () { updateCellTheme(cell); });
+                });
+            } else {
+                btn.innerText = "Edit ✏️";
+                btn.style.backgroundColor = "var(--edit-mode)";
+                cells.forEach(cell => {
+                    cell.contentEditable = "false";
+                    cell.classList.remove('editable-active');
+                    updateCellTheme(cell);
+                });
+            }
+        }
+
+        function downloadTimetable() {
+            if (isEditMode) toggleEditMode();
+            const captureTarget = document.querySelector('.table-container');
+            html2canvas(captureTarget, { scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'Timetable.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        window.addEventListener('load', function () {
+            if (window.history.replaceState) window.history.replaceState(null, null, window.location.href);
+
+            {% if not schedule_found %}
+            // FRESH LOAD: Clear inputs
+            const textInputs = document.querySelectorAll('.clear-on-load');
+            textInputs.forEach(input => {
+                if (input.type === "number") input.value = "0";
+                else input.value = "";
+            });
+            const checkboxes = document.querySelectorAll('.clear-on-load-checkbox');
+            checkboxes.forEach(box => {
+                box.checked = false;
+                const id = box.id.split('_')[1];
+                togglePredefined(id); // Sync UI
+            });
+            updateTotalCount();
+            {% else %}
+            // AFTER GENERATE: Scroll to result
+            const resultSection = document.getElementById('result-section');
+            if (resultSection) resultSection.scrollIntoView({ behavior: 'smooth' });
+            {% endif %}
+        });
+    </script>
+
+</body>
+
+</html>
